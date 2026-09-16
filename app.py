@@ -11,7 +11,12 @@ from src.metrics import (
 )
 
 
-DATA_PATH = Path("data/sample_results.jsonl")
+PROJECT_ROOT = Path(__file__).resolve().parent
+
+DATASETS = {
+    "Curated sample data": PROJECT_ROOT / "data" / "sample_results.jsonl",
+    "Offline experiment": PROJECT_ROOT / "results" / "offline_experiment.jsonl",
+}
 
 
 def load_results(path: Path) -> pd.DataFrame:
@@ -25,7 +30,27 @@ def load_results(path: Path) -> pd.DataFrame:
             if line:
                 records.append(json.loads(line))
 
-    return pd.DataFrame(records)
+    results = pd.DataFrame(records)
+
+    # Ensure optional columns exist for all datasets.
+    defaults = {
+        "human_label": "unreviewed",
+        "human_notes": "",
+        "notes": "",
+        "failure_mode": None,
+        "evaluator_confidence": 0.0,
+    }
+
+    for column, default_value in defaults.items():
+        if column not in results.columns:
+            results[column] = default_value
+
+    # The dashboard uses "notes" for the test explorer.
+    # If only human_notes exists, preserve both columns.
+    results["notes"] = results["notes"].fillna("")
+    results["human_notes"] = results["human_notes"].fillna("")
+
+    return results
 
 
 st.set_page_config(
@@ -45,13 +70,25 @@ st.write(
     """
 )
 
-if not DATA_PATH.exists():
-    st.error(f"Could not find sample data at `{DATA_PATH}`.")
+available_datasets = {
+    name: path for name, path in DATASETS.items() if path.exists()
+}
+
+if not available_datasets:
+    st.error("No evaluation datasets were found.")
     st.stop()
 
-results = load_results(DATA_PATH)
+selected_dataset = st.selectbox(
+    "Choose an evaluation dataset",
+    options=list(available_datasets.keys()),
+)
 
-st.success(f"Loaded {len(results)} evaluation results.")
+data_path = available_datasets[selected_dataset]
+results = load_results(data_path)
+
+st.success(
+    f"Loaded {len(results)} results from `{data_path.relative_to(PROJECT_ROOT)}`."
+)
 
 st.divider()
 
@@ -103,38 +140,48 @@ st.bar_chart(label_counts)
 # Human versus automated evaluation
 st.header("Human versus automated evaluation")
 
-overall_agreement = calculate_agreement(results)
+reviewed_results = results[results["human_label"] != "unreviewed"]
 
-st.metric(
-    "Overall agreement",
-    f"{overall_agreement:.1%}",
-)
-
-disagreement_data = results[
-    results["automated_label"] != results["human_label"]
-]
-
-if disagreement_data.empty:
-    st.success("No human/evaluator disagreements in the sample.")
+if reviewed_results.empty:
+    st.info(
+        "No human-reviewed labels are present in this dataset yet. "
+        "The agreement metric will appear after human review."
+    )
 else:
-    st.warning(
-        f"{len(disagreement_data)} result(s) contain human/evaluator disagreement."
+    overall_agreement = calculate_agreement(reviewed_results)
+
+    st.metric(
+        "Human/evaluator agreement",
+        f"{overall_agreement:.1%}",
     )
 
-    st.dataframe(
-        disagreement_data[
-            [
-                "test_id",
-                "condition",
-                "strategy",
-                "category",
-                "automated_label",
-                "human_label",
-                "notes",
-            ]
-        ],
-        use_container_width=True,
-    )
+    disagreement_data = reviewed_results[
+        reviewed_results["automated_label"]
+        != reviewed_results["human_label"]
+    ]
+
+    if disagreement_data.empty:
+        st.success("No human/evaluator disagreements in the reviewed sample.")
+    else:
+        st.warning(
+            f"{len(disagreement_data)} reviewed result(s) contain disagreement."
+        )
+
+        st.dataframe(
+            disagreement_data[
+                [
+                    "test_id",
+                    "condition",
+                    "strategy",
+                    "category",
+                    "automated_label",
+                    "human_label",
+                    "notes",
+                    "human_notes",
+                ]
+            ],
+            use_container_width=True,
+        )
 
 # Category coverage
 st.header("Category coverage")
@@ -174,7 +221,7 @@ st.write(f"**Automated label:** `{selected_test['automated_label']}`")
 st.write(f"**Human label:** `{selected_test['human_label']}`")
 st.write(
     f"**Evaluator confidence:** "
-    f"{selected_test['evaluator_confidence']:.0%}"
+    f"{float(selected_test['evaluator_confidence']):.0%}"
 )
 
 st.subheader("Test prompt")
@@ -185,6 +232,9 @@ st.write(selected_test["expected_behavior"])
 
 st.subheader("Target response")
 st.code(selected_test["target_response"])
+
+st.subheader("Evaluator rationale")
+st.write(selected_test.get("evaluator_rationale", ""))
 
 st.subheader("Notes")
 st.write(selected_test["notes"])
