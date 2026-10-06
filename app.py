@@ -16,6 +16,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 DATASETS = {
     "Curated sample data": PROJECT_ROOT / "data" / "sample_results.jsonl",
     "Offline experiment": PROJECT_ROOT / "results" / "offline_experiment.jsonl",
+    "Revised local-model pilot": (
+    PROJECT_ROOT / "results" / "local_pilot_20261005T221442Z.jsonl"
+),
 }
 
 
@@ -85,6 +88,97 @@ selected_dataset = st.selectbox(
 
 data_path = available_datasets[selected_dataset]
 results = load_results(data_path)
+if selected_dataset == "Revised local-model pilot":
+    import csv
+
+    review_path = (
+        PROJECT_ROOT / "data" / "local_review_20261005T221442Z.csv"
+    )
+
+    if not review_path.exists():
+        st.error(f"Missing human-review file: {review_path}")
+        st.stop()
+
+    with review_path.open(newline="", encoding="utf-8") as file:
+        reviews = list(csv.DictReader(file))
+
+    review_by_id = {row["test_id"]: row for row in reviews}
+
+    if len(review_by_id) != len(reviews):
+        st.error("Duplicate test IDs found in the review file.")
+        st.stop()
+
+    if set(results["test_id"]) != set(review_by_id):
+        st.error("The pilot results and human reviews have different test IDs.")
+        st.stop()
+
+    results["human_label"] = results["test_id"].map(
+        lambda test_id: review_by_id[test_id]["human_label"].strip()
+    )
+    results["human_notes"] = results["test_id"].map(
+        lambda test_id: review_by_id[test_id]["human_notes"].strip()
+    )
+
+    st.success(f"Loaded {len(results)} real-model pilot responses.")
+    st.caption(
+        "Target: qwen2.5:3b running locally. Labels are from one human "
+        "reviewer; no automated evaluator was applied to this pilot."
+    )
+
+    st.header("Baseline vs. specialized strategies")
+
+    summary = []
+    for condition in ("baseline", "swarm"):
+        group = results[results["condition"] == condition]
+        valid = group[group["human_label"] != "invalid"]
+
+        summary.append({
+            "Condition": condition,
+            "Tests run": len(group),
+            "Valid tests": len(valid),
+            "Human-labeled failures": (
+                valid["human_label"] == "failure"
+            ).sum(),
+            "Passes": (valid["human_label"] == "pass").sum(),
+            "Invalid tests": (
+                group["human_label"] == "invalid"
+            ).sum(),
+        })
+
+    st.dataframe(pd.DataFrame(summary), hide_index=True)
+
+    st.warning(
+        "This is a small, hand-authored pilot—not evidence that an "
+        "autonomous swarm outperforms a baseline. Category counts were "
+        "matched by design, so category coverage is not an outcome here."
+    )
+
+    st.header("Explore a response")
+
+    selected_id = st.selectbox(
+        "Select a test",
+        results["test_id"].tolist(),
+    )
+    row = results.loc[results["test_id"] == selected_id].iloc[0]
+
+    st.write(
+        f"**Condition:** {row['condition']} · "
+        f"**Strategy:** {row['strategy']} · "
+        f"**Category:** {row['category']}"
+    )
+    st.write(f"**Human label:** `{row['human_label']}`")
+    st.subheader("Legitimate task and test prompt")
+    st.info(row["test_prompt"])
+    st.subheader("Expected behavior")
+    st.write(row["expected_behavior"])
+    st.subheader("Model response")
+    st.code(row["target_response"])
+    st.subheader("Human-review rationale")
+    st.write(row["human_notes"])
+
+    # The existing dashboard sections expect automated_label. They apply
+    # to the mock datasets, not to this human-reviewed local pilot.
+    st.stop()
 
 st.success(
     f"Loaded {len(results)} results from `{data_path.relative_to(PROJECT_ROOT)}`."
