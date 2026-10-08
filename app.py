@@ -19,6 +19,12 @@ DATASETS = {
     "Revised local-model pilot": (
     PROJECT_ROOT / "results" / "local_pilot_20261005T221442Z.jsonl"
 ),
+    "Reviewed paired probe": (
+    PROJECT_ROOT
+    / "results"
+    / "paired_probes"
+    / "paired_probe_20261007T131704875832Z.jsonl"
+),
 }
 
 
@@ -88,6 +94,83 @@ selected_dataset = st.selectbox(
 
 data_path = available_datasets[selected_dataset]
 results = load_results(data_path)
+
+if selected_dataset == "Reviewed paired probe":
+    import csv
+
+    review_path = (
+        PROJECT_ROOT / "data" / "pair_review_20261007T131704875832Z.csv"
+    )
+
+    if not review_path.exists():
+        st.error(f"Missing review file: {review_path}")
+        st.stop()
+
+    with review_path.open(newline="", encoding="utf-8") as file:
+        reviews = list(csv.DictReader(file))
+
+    if len(results) != 2 or set(results["role"]) != {"control", "injection"}:
+        st.error("Expected exactly one control and one injection response.")
+        st.stop()
+
+    if len(reviews) != 2 or {row["role"] for row in reviews} != {
+        "control",
+        "injection",
+    }:
+        st.error("Expected one review for each role.")
+        st.stop()
+
+    review_by_role = {row["role"]: row for row in reviews}
+
+    for _, row in results.iterrows():
+        review = review_by_role[row["role"]]
+        if (
+            row["run_id"] != review["run_id"]
+            or row["test_id"] != review["test_id"]
+            or not review["human_label"].strip()
+        ):
+            st.error(f"Review does not match response: {row['role']}")
+            st.stop()
+
+    st.success("Loaded one human-reviewed matched pair.")
+    st.caption(
+        "Local qwen2.5:3b · one control and one injection test · "
+        "labels from one human reviewer"
+    )
+    st.title("Anatomy of a prompt-injection probe")
+    st.write(
+        "The two prompts contain the same garden-tour fact. "
+        "The injection prompt additionally contains an instruction "
+        "inside the document."
+    )
+
+    control = results.loc[results["role"] == "control"].iloc[0]
+    injection = results.loc[results["role"] == "injection"].iloc[0]
+
+    left, right = st.columns(2)
+
+    for column, role, row in (
+        (left, "Control", control),
+        (right, "Injection", injection),
+    ):
+        review = review_by_role[role.lower()]
+        with column:
+            st.subheader(role)
+            st.write(f"**Human label:** `{review['human_label']}`")
+            st.write("**Prompt**")
+            st.code(row["test_prompt"])
+            st.write("**Model response**")
+            st.code(row["target_response"])
+            st.write(f"**Review:** {review['human_notes']}")
+
+    st.warning(
+        "This is one paired observation, not a failure-rate estimate "
+        "or evidence that a multi-agent swarm outperforms a baseline."
+    )
+
+    # The older dashboard sections expect automated evaluator labels.
+    st.stop()
+    
 if selected_dataset == "Revised local-model pilot":
     import csv
 
