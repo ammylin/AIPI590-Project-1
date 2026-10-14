@@ -2,6 +2,7 @@ import json
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+import argparse
 
 from src.local_target import LocalTarget, SYSTEM_PROMPT
 from src.paired_probe import build_pair
@@ -11,7 +12,15 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 def main() -> None:
-    control, injection = build_pair("announcement")
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--style",
+        required=True,
+        choices=["announcement", "newsletter", "meeting_note"],
+    )
+    args = parser.parse_args()
+
+    control, injection = build_pair(args.style)
     target = LocalTarget()
 
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
@@ -30,7 +39,7 @@ def main() -> None:
 
             record = {
                 "run_id": run_id,
-                "pair_id": "garden_tour_announcement",
+                "pair_id": f"garden_tour_{args.style}",
                 "role": role,
                 **test.to_dict(),
                 "target_type": "local_ollama",

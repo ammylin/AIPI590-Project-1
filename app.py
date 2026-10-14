@@ -98,8 +98,30 @@ results = load_results(data_path)
 if selected_dataset == "Reviewed paired probe":
     import csv
 
+    PAIR_RUNS = {
+        "announcement": "20261007T131704875832Z",
+        "newsletter": "20261013T234602749276Z",
+        "meeting_note": "20261013T234623243236Z",
+    }
+
+    selected_style = st.selectbox(
+        "Choose document style",
+        options=list(PAIR_RUNS),
+    )
+    pair_run_id = PAIR_RUNS[selected_style]
+
+    pair_data_path = (
+        PROJECT_ROOT / "results" / "paired_probes"
+        / f"paired_probe_{pair_run_id}.jsonl"
+    )
+    if not pair_data_path.exists():
+        st.error(f"Missing paired-probe data: {pair_data_path}")
+        st.stop()
+
+    results = load_results(pair_data_path)
+
     review_path = (
-        PROJECT_ROOT / "data" / "pair_review_20261007T131704875832Z.csv"
+        PROJECT_ROOT / "data" / f"pair_review_{pair_run_id}.csv"
     )
 
     if not review_path.exists():
