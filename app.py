@@ -69,13 +69,19 @@ st.set_page_config(
 )
 
 st.title("🛡️ SwarmAudit Lite")
-st.subheader("Multi-agent red-teaming evaluation")
+st.subheader("An interactive, human-reviewed LLM red-teaming workflow")
 
 st.write(
     """
     SwarmAudit Lite compares a generic red-team strategy with a small,
     role-diverse red-team workflow. The goal is to study coverage,
     redundancy, failure patterns, and evaluator agreement.
+
+    We explore a small comparison of hand-authored generic and specialized
+    safety tests, plus matched control/injection probes run against a
+    local model. Human review distinguishes following an embedded
+    instruction from merely mentioning it. Mock datasets are included
+    to demonstrate the pipeline, not as evidence about model safety.
     """
 )
 
@@ -97,7 +103,6 @@ results = load_results(data_path)
 
 if selected_dataset == "Reviewed paired probe":
     import csv
-
     PAIR_RUNS = {
         "announcement": "20261007T131704875832Z",
         "newsletter": "20261013T234602749276Z",
@@ -191,7 +196,6 @@ if selected_dataset == "Reviewed paired probe":
         "the document-style heading changes. They are closely related "
         "examples, not a general failure-rate estimate."
     )
-
     st.title("Anatomy of a prompt-injection probe")
     st.write(
         "The two prompts contain the same garden-tour fact. "
@@ -225,7 +229,7 @@ if selected_dataset == "Reviewed paired probe":
 
     # The older dashboard sections expect automated evaluator labels.
     st.stop()
-    
+
 if selected_dataset == "Revised local-model pilot":
     import csv
 
