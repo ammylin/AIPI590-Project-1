@@ -22,6 +22,8 @@ class DashboardTests(unittest.TestCase):
         app = self.start_app()
         self.assert_healthy(app)
         self.assertEqual(app.selectbox[0].value, 'Local-model pilots')
+        self.assertTrue(any('Second review pass by the same reviewer' == item.value for item in app.header))
+        self.assertTrue(any(item.label == 'Agreement between review passes' and item.value == '75%' for item in app.metric))
         self.assertIn(REVISED_RUN, app.selectbox[1].value.name)
         # Summary table keeps the original labels; sensitivity adds another table.
         self.assertEqual(app.dataframe[0].value.iloc[1]['Failure'], 3)

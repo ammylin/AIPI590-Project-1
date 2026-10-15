@@ -66,25 +66,29 @@ python -m src.analyze_reviewed_pilot --results results/local_pilot_NEW_RUN_ID.js
 
 Refresh/rerun the Streamlit app. New pilot and paired JSONL files automatically appear in the run selectors. Their matching review filenames are discovered without editing `app.py`.
 
-## Independent second review
+## Completed self-review and future independent review
 
-The repository already includes an **unfilled** packet at `data/independent_review/second_review_20261005T221442Z.csv`. There is no completed second review.
+The author completed `data/independent_review/second_review_20261005T221442Z.csv` themselves. The completed packet is a **second self-review pass**, not an independent reviewer. The `.metadata.json` sidecar records `same_reviewer`; the retained directory name and `reviewer_002` ID are historical identifiers only.
 
-Give another person only that CSV and `docs/review_rubric.md`; withhold original labels, the findings, and the `.key.json` linkage file until labeling is finished. Ask them to fill `reviewer_id` (a consistent pseudonym is fine), `human_label`, and `human_notes` for every case without changing observations. Shuffling and omission of condition/strategy names reduce obvious cues but cannot guarantee independence, particularly if a reviewer has already seen the dashboard.
+The passes agree on 9/12 labels (75%). The comparison report lists three changed judgments and both rationales. No adjudication has been performed, and the original pilot and detector summaries retain their original labels. One second-pass pass rationale conflicts with a placeholder-only response; see [the analysis](evaluator_analysis.md#completed-self-review-pass).
 
-After that person completes the packet:
-
-```bash
-python -m src.compare_second_review
-```
-
-This command rejects incomplete or modified packets and writes a separate comparison report with exact-label agreement, a label cross-tab, disagreements, notes, and source hashes. Agreement is consistency, not correctness. It does not adjudicate or overwrite either person's judgments. To repeat a comparison, supply a new `--output` path; existing reports are protected from overwrite.
-
-To prepare a packet for another run:
+To regenerate the derived report:
 
 ```bash
-python -m src.create_second_review --results results/local_pilot_NEW_RUN_ID.jsonl
+python -m src.compare_second_review --overwrite
 ```
+
+The command rejects incomplete or altered observations, reads the saved relationship declaration, and hashes its source files. `--overwrite` affects only the derived JSON report. Without that flag, existing reports remain protected. To preserve multiple report versions, supply a different `--output` path.
+
+For a future review by a different person, generate a fresh packet in a separate directory, even if reusing the same model run:
+
+```bash
+python -m src.create_second_review --results results/local_pilot_20261005T221442Z.jsonl --output-dir data/future_review
+```
+
+Give that person only the new CSV and the general rubric, withholding the project-specific provenance paragraph, original labels, findings, and linkage key until review is finished. The original author must not fill this new packet on their behalf. Fill a consistent reviewer ID, labels, and evidence notes without changing observations. Shuffling does not guarantee blindness or independence.
+
+After a genuinely independent review has been completed, use `--packet` for its CSV, a new `--output`, and `--review-relationship independent_reviewer`. This declaration describes the actual procedure; code cannot verify independence. For another self-review, declare `same_reviewer`. If no declaration or metadata is supplied, the comparison reports `unspecified` and makes no independence claim. Record any later adjudication separately without overwriting the review passes.
 
 ## Constrained generation prototype
 
@@ -110,9 +114,9 @@ python -m unittest discover -s tests -v
 python -m unittest tests.test_dashboard -v
 ```
 
-The main suite checks saved evidence/review integrity, detector errors and exclusions, source hashes, paired comparisons, independent-review validation, and the original strategy/evaluator checks. Dashboard tests use Streamlit's `AppTest` to navigate all datasets, saved runs, and the sensitivity view. They do not query Ollama. No new model responses or completed human reviews are required.
+The main suite checks saved evidence/review integrity, detector errors and exclusions, source hashes, paired comparisons, review-pass provenance and validation, and the original strategy/evaluator checks. Dashboard tests use Streamlit's `AppTest` to navigate all datasets, saved runs, and the sensitivity view. They do not query Ollama. No new model responses or completed human reviews are required.
 
-On October 14, 2026, all 18 regression and dashboard checks passed in a fresh Python 3.11 environment installed from `requirements.txt`; `pip check` also passed. No live model experiment or second human review was performed during that verification.
+On October 14, 2026, all 20 regression and dashboard checks passed in a fresh Python 3.11 environment installed from `requirements.txt`; `pip check` also passed. No live model experiment or new human review was performed during that verification; reviewer input is read from the saved packets.
 
 If an older environment stalls while importing NumPy/pandas before the app starts, test with a fresh environment instead of interpreting the stall as an evaluation result:
 

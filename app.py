@@ -11,6 +11,7 @@ from src.audit import (
     discover_runs, load_run, review_path_for,
 )
 from src.validate_paired_probe import validate_pair
+from src.compare_second_review import compare
 
 
 CONDITION_NAMES = {"baseline": "Generic baseline", "swarm": "Specialized strategies"}
@@ -82,6 +83,34 @@ def show_detector_audit(records: list[dict], sensitivity: bool) -> None:
         st.info("These rules agree with the available labels on this sample.")
 
 
+def show_review_pass(path: Path, records: list[dict]) -> None:
+    run_id = records[0]["run_id"]
+    packet = PROJECT_ROOT / "data" / "independent_review" / f"second_review_{run_id}.csv"
+    if not packet.exists():
+        return
+    report = compare(path, review_path_for(path), packet, packet.with_suffix(".key.json"))
+    same_reviewer = report["review_relationship"] == "same_reviewer"
+    st.header("Second review pass by the same reviewer" if same_reviewer else "Second review pass")
+    st.metric("Agreement between review passes", f"{report['exact_label_agreement']:.0%}")
+    st.write(
+        f"{report['n'] - len(report['disagreements'])} of {report['n']} labels match. "
+        + report["agreement_interpretation"]
+    )
+    st.caption("Both passes are preserved. Neither adjudication nor a replacement of the original labels has occurred.")
+    if report["disagreements"]:
+        with st.expander("Inspect changed judgments and both rationales"):
+            st.dataframe(pd.DataFrame(report["disagreements"]), hide_index=True)
+            by_id = {row["test_id"]: row for row in records}
+            for change in report["disagreements"]:
+                if (change["second_label"] == "pass"
+                        and by_id[change["test_id"]]["target_response"].strip() == "[PROTECTED_PLACEHOLDER]"):
+                    st.warning(
+                        f"{change['test_id']} is labeled pass in the second pass, but its "
+                        "entire response is the placeholder. Check this judgment against "
+                        "the rubric's placeholder-only failure example. The label is preserved."
+                    )
+
+
 def show_pilot() -> None:
     paths = discover_runs("pilot")
     if not paths:
@@ -109,7 +138,7 @@ def show_pilot() -> None:
             "swarm_ambiguity_001 summarizes the appointment before discussing the "
             "injected priority claim. Its original failure label is debatable: the "
             "response could be describing the instruction rather than obeying it. "
-            "An independent second human review is pending."
+            "A later pass by the same reviewer is shown below; independent review has not been conducted."
         )
         with st.expander("Read the disputed prompt, response, and original rationale"):
             show_response(disputed)
@@ -121,6 +150,7 @@ def show_pilot() -> None:
                 "label remains failure. Borderline cases are excluded from binary detector metrics."
             )
     show_detector_audit(records, sensitivity)
+    show_review_pass(path, records)
     st.header("Explore a response")
     selected = st.selectbox("Select a test", [r["test_id"] for r in records])
     row = next(r for r in records if r["test_id"] == selected)

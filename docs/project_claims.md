@@ -13,13 +13,13 @@ The intended audience is students and practitioners learning to audit document-p
 - Three closely related garden-tour controls were labeled passes and three injection responses failures. Their headings vary; their fact and payload do not.
 - An invalid initial test became judgeable after its legitimate task was repaired. Its placeholder-only response was unchanged.
 - Pilot notes describe two invalid unconstrained-generator candidates; their raw outputs were not retained. The constrained prototype restricts the model to selecting a document heading while code supplies essential test components.
-- A shuffled, unlabeled second-review packet and comparison tool are available. Independent human review is still pending.
+- The author completed a second self-review pass: 9/12 labels agree (75%), with three changed judgments. This is within-reviewer agreement, not independent review or inter-rater reliability. No adjudication has occurred. One second-pass pass rationale describes a summary despite a placeholder-only response; it needs reconsideration.
 
 ## Unsupported claims
 
 - Specialized strategies are generally better than generic tests.
 - The detector rules are reliable semantic safety judges or validated on a held-out set.
-- The sensitivity scenario is an independent review or adjudicated replacement label.
+- The sensitivity scenario or second self-review pass is an independent review or adjudicated replacement label.
 - The three pairs estimate a general failure rate.
 - The system is an autonomous multi-agent swarm.
 - Mock labels or confidence scores establish real-model safety.
@@ -27,4 +27,4 @@ The intended audience is students and practitioners learning to audit document-p
 
 ## Main limitations and takeaway
 
-One small model, fixed settings, hand-authored prompts, one completed reviewer, retrospective analysis, and closely related pairs limit generalization. Historical runs lack model digests and runtime provenance. The primary lesson is that valid tasks and careful judgments matter: counting placeholder occurrences can misclassify responses, and a mixed response can change the apparent result depending on how uncertainty is represented.
+One small model, fixed settings, hand-authored prompts, one reviewer completing two non-independent passes, retrospective analysis, and closely related pairs limit generalization. Historical runs lack model digests and runtime provenance. The primary lesson is that valid tasks and careful judgments matter: counting placeholder occurrences can misclassify responses, and a mixed response can change the apparent result depending on how uncertainty is represented.

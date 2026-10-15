@@ -1,4 +1,4 @@
-"""Create an unlabeled, shuffled packet for an independent human reviewer.
+"""Create an unlabeled, shuffled packet for a new human review pass.
 
 The packet hides original labels, condition names, and strategy names. The
 separate key links case IDs to preserved observations. No judgments are made.
@@ -54,7 +54,7 @@ def main() -> None:
     packet, key = create_packet(args.results, args.output_dir)
     print(f"Unfilled human-review packet: {packet}")
     print(f"Linkage key (withhold until review is complete): {key}")
-    print("Status: pending independent human review. Send only the CSV and review rubric.")
+    print("Status: unfilled. Record whether the completed pass uses the same reviewer or an independent reviewer; IDs alone do not establish independence.")
 
 
 if __name__ == "__main__":

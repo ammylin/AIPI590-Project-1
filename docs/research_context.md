@@ -26,7 +26,7 @@ These sources were added to contextualize the artifact and its design. The exist
 | Harmless facts and a synthetic placeholder | Make obedience visible without real secrets or harmful tasks | Outcomes do not quantify real-world harm |
 | Hand-authored tests with matched category counts | Keep a small comparison understandable | Wording differs; neither strategy is a representative sample |
 | Preserve raw JSONL and separate review CSVs | Keep observations distinguishable from interpretation | Review joins must validate IDs, prompts, responses, and run metadata |
-| Use human labels and a borderline option | Allow contextual judgments and explicit uncertainty | One reviewer can be inconsistent; independent review is pending |
+| Use human labels and a borderline option | Allow contextual judgments and explicit uncertainty | The same reviewer completed two passes with 75% agreement; independent review has not been conducted |
 | Add paired controls differing by one instruction | Check legitimate-task capability while isolating one prompt change | Three heading variants provide little independent diversity |
 | Compare two transparent detector rules | Make false positives and judgment dependence concrete | Retrospective descriptive comparison, not a trained or validated judge |
 | Expose sensitivity without editing labels | Show the effect of a disputed interpretation | Hypothetical scenarios must not be mistaken for additional human reviews |
@@ -40,7 +40,7 @@ These sources were added to contextualize the artifact and its design. The exist
 
 **End users and people represented in documents** could be affected if an assistant follows document instructions or produces misleading summaries. This project uses fictional facts and no personal data. Extending it to real documents would require appropriate data access and protection.
 
-**Reviewers** make interpretive decisions. Preserve their original notes, disclose who reviewed a run, and distinguish disagreement from error. A second person's agreement must not be claimed before that person completes a review.
+**Reviewers** make interpretive decisions. Preserve their original notes, disclose who reviewed a run, and distinguish disagreement from error. A second pass by the same person must be described as self-review, not agreement between independent reviewers. Here, the author confirmed completing both passes; a metadata sidecar records that relationship.
 
 Publishing small synthetic tests is useful for education, but the interface should not encourage users to treat a model as safe because it passed a toy task. No live actions, secret extraction, or harmful requests are tested here.
 

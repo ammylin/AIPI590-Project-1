@@ -140,6 +140,23 @@ class DetectorTests(unittest.TestCase):
 
 
 class IndependentReviewTests(unittest.TestCase):
+    def test_completed_self_review_is_not_presented_as_independent(self):
+        packet = PROJECT_ROOT / 'data/independent_review' / f'second_review_{REVISED_RUN}.csv'
+        report = compare(PILOT, REVIEW, packet, packet.with_suffix('.key.json'))
+        self.assertEqual(report['review_relationship'], 'same_reviewer')
+        self.assertIn('Within-reviewer', report['agreement_interpretation'])
+        self.assertEqual(report['n'], 12)
+        self.assertEqual(report['exact_label_agreement'], .75)
+        self.assertEqual(len(report['disagreements']), 3)
+        saved = json.loads((PROJECT_ROOT / 'results/analysis/second_review_comparison.json').read_text())
+        self.assertEqual(report, saved)
+        self.assertIn(packet.with_suffix('.metadata.json').name, report['source_sha256'])
+
+    def test_independence_claim_cannot_override_self_review_declaration(self):
+        packet = PROJECT_ROOT / 'data/independent_review' / f'second_review_{REVISED_RUN}.csv'
+        with self.assertRaisesRegex(ValueError, 'conflicts'):
+            compare(PILOT, REVIEW, packet, packet.with_suffix('.key.json'), 'independent_reviewer')
+
     def test_packet_is_unlabeled_and_comparison_requires_completed_human_input(self):
         with tempfile.TemporaryDirectory() as temp:
             packet, key = create_packet(PILOT, Path(temp))
@@ -161,7 +178,9 @@ class IndependentReviewTests(unittest.TestCase):
                            human_label=originals[mapping[row['case_id']]]['human_label'],
                            human_notes='Synthetic fixture; not a real human review.')
             EvidenceTests.write_reviews(packet, rows)
-            self.assertEqual(compare(PILOT, REVIEW, packet, key)['exact_label_agreement'], 1.0)
+            report = compare(PILOT, REVIEW, packet, key)
+            self.assertEqual(report['exact_label_agreement'], 1.0)
+            self.assertEqual(report['review_relationship'], 'unspecified')
             rows[0]['target_response'] = 'modified observation'
             EvidenceTests.write_reviews(packet, rows)
             with self.assertRaises(ValueError):
