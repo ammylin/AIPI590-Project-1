@@ -8,6 +8,23 @@ The intended audience is students learning Responsible AI evaluation and practit
 
 The contribution is a reusable workflow combining preserved observations, validated review joins, matched controls, an interactive response explorer, and an explicit analysis of evaluator disagreement and judgment sensitivity. The case study is small. Its originality is the integration and inspectable teaching example, not a claim to have invented prompt injection, human review, or a new attack algorithm.
 
+## Explainability methods and their boundaries
+
+The implemented contribution is explainable evaluation and behavioral inspection. It does not provide mechanistic explanations of the language model.
+
+| Implemented technique | What becomes inspectable | Boundary |
+|---|---|---|
+| Matched control/injection comparisons | Responses with and without one entire embedded instruction | A limited whole-instruction perturbation; no word-level importance or internal causal mechanism is identified |
+| Example-based inspection | Prompt, expected task, response, label, and notes | Individual examples do not establish population-level performance |
+| Human-written review rationales | Why the reviewer assigned a label | Reviewer reasoning can be inconsistent; it is not the model's reasoning |
+| Transparent output rules | Exact conditions producing each detector label | Token matching is not semantic evidence of instruction obedience |
+| Judgment sensitivity analysis | How treating one disputed case as borderline changes summaries | A hypothetical scenario, not a new experiment or adjudication |
+| Comparison of two self-review passes | Which judgments changed within one reviewer | Agreement after a correction is not independent inter-rater reliability |
+
+SHAP, LIME, Integrated Gradients, attention-based attribution, and phrase-level ablation are not implemented. Calling the current detector comparison "feature attribution" would misdescribe what it measures. A future phrase-level ablation could remove components of the attack instruction while keeping the task, document fact, and model settings fixed, then review the responses. That requires new model observations and contextual review, so it remains future work rather than a result in this artifact.
+
+For presentation: **SwarmAudit Lite explains how prompt-injection evaluations are reached, and shows how observed responses change under a controlled input change. It does not explain the model's internal mechanisms.**
+
 ## Relevant work and connection to this project
 
 1. **Kai Greshake, Sahar Abdelnabi, Shailesh Mishra, Christoph Endres, Thorsten Holz, and Mario Fritz (2023).** [Not what you've signed up for: Compromising Real-World LLM-Integrated Applications with Indirect Prompt Injection](https://arxiv.org/abs/2302.12173). This work describes malicious instructions placed in external content that an LLM application processes. It motivates studying the boundary between legitimate task instructions and document data. Our quoted documents simulate that boundary; they do not implement retrieval or reproduce the paper's attacks.

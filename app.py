@@ -247,6 +247,19 @@ except (ValueError, KeyError, OSError) as exc:
     st.error(f"Could not validate the selected evidence: {exc}")
     st.stop()
 
+with st.expander("What does this project explain?"):
+    st.write(
+        "This workflow explains evaluation decisions and observed model behavior: "
+        "matched controls reveal the response change when an entire embedded instruction "
+        "is removed; examples and human notes show the evidence behind labels; transparent "
+        "rules and sensitivity analysis show how scoring choices affect the result."
+    )
+    st.caption(
+        "These are behavioral comparisons and explanations of reviewer judgments. "
+        "They do not expose the model's internal reasoning or assign importance to individual "
+        "words. SHAP, LIME, Integrated Gradients, and phrase-level ablation are not implemented."
+    )
+
 with st.expander("Research context, scope, and next steps"):
     st.markdown(
         "Document instructions cross a trust boundary when treated as commands "

@@ -18,6 +18,12 @@ The contribution is an integrated teaching and audit workflow with a small, repr
 
 This project does not introduce a new attack algorithm or establish a general benchmark. The specialized tests were hand-authored; the internal `swarm` condition means specialized strategies, not autonomous agents. A separate constrained-generation prototype lets a local model choose a heading while code supplies the actual test.
 
+## Explainability scope
+
+The project makes **evaluation decisions and observed behavior** explainable through matched control/injection comparisons, inspectable examples, human-written rationales, transparent scoring rules, and sensitivity analysis. The paired probes provide a limited input-perturbation experiment: removing the entire embedded instruction while keeping the legitimate task and document fact fixed.
+
+These comparisons do not reveal the model's internal reasoning or assign importance to individual words. SHAP, LIME, Integrated Gradients, and phrase-level ablation are not implemented. Human notes explain the reviewer's judgment; they are not explanations generated from model internals. See [the method distinctions](docs/research_context.md#explainability-methods-and-their-boundaries) and [verified presentation material](docs/project_claims.md#presentation-material-from-the-current-evidence).
+
 ## Quickstart: view saved evidence
 
 Python 3.11 is recommended. **No Ollama installation, API key, or model download is needed to explore saved results.**
