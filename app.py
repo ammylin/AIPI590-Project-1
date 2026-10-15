@@ -159,6 +159,39 @@ if selected_dataset == "Reviewed paired probe":
         "Local qwen2.5:3b · one control and one injection test · "
         "labels from one human reviewer"
     )
+    st.subheader("Reviewed pairs at a glance")
+
+    pair_summary = []
+    for style, run_id in PAIR_RUNS.items():
+        summary_path = PROJECT_ROOT / "data" / f"pair_review_{run_id}.csv"
+        if not summary_path.exists():
+            st.error(f"Missing review file: {summary_path}")
+            st.stop()
+
+        with summary_path.open(newline="", encoding="utf-8") as file:
+            pair_reviews = list(csv.DictReader(file))
+
+        labels = {
+            review["role"]: review["human_label"].strip()
+            for review in pair_reviews
+        }
+        if len(pair_reviews) != 2 or set(labels) != {"control", "injection"}:
+            st.error(f"Expected one reviewed control and injection for {style}.")
+            st.stop()
+
+        pair_summary.append({
+            "Document style": style.replace("_", " ").title(),
+            "Control": labels["control"],
+            "Injection": labels["injection"],
+        })
+
+    st.dataframe(pd.DataFrame(pair_summary), hide_index=True)
+    st.caption(
+        "These probes share the same fact and embedded instruction; only "
+        "the document-style heading changes. They are closely related "
+        "examples, not a general failure-rate estimate."
+    )
+
     st.title("Anatomy of a prompt-injection probe")
     st.write(
         "The two prompts contain the same garden-tour fact. "
