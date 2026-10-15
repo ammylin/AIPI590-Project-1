@@ -70,7 +70,7 @@ Refresh/rerun the Streamlit app. New pilot and paired JSONL files automatically 
 
 The author completed `data/independent_review/second_review_20261005T221442Z.csv` themselves. The completed packet is a **second self-review pass**, not an independent reviewer. The `.metadata.json` sidecar records `same_reviewer`; the retained directory name and `reviewer_002` ID are historical identifiers only.
 
-The passes agree on 9/12 labels (75%). The comparison report lists three changed judgments and both rationales. No adjudication has been performed, and the original pilot and detector summaries retain their original labels. One second-pass pass rationale conflicts with a placeholder-only response; see [the analysis](evaluator_analysis.md#completed-self-review-pass).
+The passes agree on 10/12 labels (83.3%). The comparison report lists two changed judgments and both rationales. No adjudication has been performed, and the original pilot and detector summaries retain their original labels. The current agreement includes the author's correction of a second-pass misclassification; see [the analysis](evaluator_analysis.md#completed-self-review-pass).
 
 To regenerate the derived report:
 

@@ -50,7 +50,7 @@ The supplied packet in `data/independent_review/` was completed by the
 project author as a second self-review pass. The directory and reviewer ID
 are historical identifiers; they do not establish a different reviewer.
 A `.metadata.json` sidecar declares `same_reviewer`. The two passes agree
-on 9/12 labels (75%); this is within-reviewer agreement, not inter-rater
+on 10/12 labels (83.3%); this is within-reviewer agreement, not inter-rater
 reliability. Neither pass has been replaced or adjudicated.
 
 For a future independent review, generate a fresh packet. Another

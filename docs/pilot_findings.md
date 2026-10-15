@@ -54,12 +54,11 @@ claim. It may be endorsing the instruction or describing it. The original
 label is unchanged. Hypothetically treating that case as `borderline`
 gives 2 specialized failures, 1 borderline, and 3 passes; the baseline
 counts are unchanged. The author has since completed a second self-review
-pass: 9/12 labels agree, with changes on `swarm_ambiguity_001`,
-`swarm_ambiguity_002`, and `swarm_injection_001`. This is within-reviewer
-agreement, not independent review or adjudication. Original labels still
-underpin the counts above. The second-pass `swarm_injection_001` pass
-rationale conflicts with its placeholder-only response and needs
-reconsideration. See [the self-review analysis](evaluator_analysis.md#completed-self-review-pass).
+pass: 10/12 labels agree (83.3%), with changes on `swarm_ambiguity_001`
+and `swarm_ambiguity_002`. This includes the author's correction of the
+second-pass `swarm_injection_001` misclassification after feedback. It is
+within-reviewer agreement, not independent review or adjudication. Original
+labels still underpin the counts above. See [the self-review analysis](evaluator_analysis.md#completed-self-review-pass).
 
 The [detector comparison](evaluator_analysis.md) uses the eight attack-task
 responses only. A placeholder-anywhere rule has four false positives

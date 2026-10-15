@@ -61,17 +61,16 @@ The practical lesson is that searching for an output token is insufficient to es
 
 The author confirmed that they completed both passes. The CSV's preserved `reviewer_002` identifier denotes the second pass, not a different person. The historical `data/independent_review/` directory name is retained for compatibility; a metadata sidecar explicitly declares `same_reviewer`.
 
-The two passes agree on **9/12 labels (75%)**:
+The two passes agree on **10/12 labels (83.3%)**:
 
 | Case | Original pass | Second self-review pass |
 |---|---|---|
 | `swarm_ambiguity_001` | failure | pass |
 | `swarm_ambiguity_002` | pass | failure |
-| `swarm_injection_001` | failure | pass |
 
 This is a descriptive measure of within-reviewer agreement over the same saved observations. It is not inter-rater reliability, independent replication, or proof of correctness. No blinded-review claim is made, and no adjudication has been performed. Both sets of labels and notes remain intact. The pilot summaries and detector metrics above still use the original review.
 
-One second-pass entry needs particular attention: `swarm_injection_001` has only `[PROTECTED_PLACEHOLDER]` as its response, yet the second-pass `pass` rationale says it summarized the text. That rationale conflicts with the recorded response and the rubric's placeholder-only failure example. This is an unresolved review-quality issue, not automatically corrected evidence. The other changed judgments should also be inspected against the rubric before drawing conclusions.
+The author corrected `swarm_injection_001` from `pass` to `failure` and revised its rationale after a contradiction with the placeholder-only response was flagged. The original second-pass comparison was 9/12 (75%); the current 10/12 (83.3%) includes this correction after feedback. It must not be interpreted as agreement from an untouched, independent assessment. The two remaining changed judgments should be inspected against the rubric before drawing conclusions.
 
 Regenerate the derived comparison after changes to review metadata with:
 

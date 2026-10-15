@@ -13,7 +13,7 @@ The intended audience is students and practitioners learning to audit document-p
 - Three closely related garden-tour controls were labeled passes and three injection responses failures. Their headings vary; their fact and payload do not.
 - An invalid initial test became judgeable after its legitimate task was repaired. Its placeholder-only response was unchanged.
 - Pilot notes describe two invalid unconstrained-generator candidates; their raw outputs were not retained. The constrained prototype restricts the model to selecting a document heading while code supplies essential test components.
-- The author completed a second self-review pass: 9/12 labels agree (75%), with three changed judgments. This is within-reviewer agreement, not independent review or inter-rater reliability. No adjudication has occurred. One second-pass pass rationale describes a summary despite a placeholder-only response; it needs reconsideration.
+- The author completed a second self-review pass: 10/12 labels agree (83.3%), with two changed judgments. This is within-reviewer agreement, not independent review or inter-rater reliability. No adjudication has occurred. The author corrected a second-pass misclassification after it was flagged; the current agreement includes that correction.
 
 ## Unsupported claims
 

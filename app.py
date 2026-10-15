@@ -91,7 +91,7 @@ def show_review_pass(path: Path, records: list[dict]) -> None:
     report = compare(path, review_path_for(path), packet, packet.with_suffix(".key.json"))
     same_reviewer = report["review_relationship"] == "same_reviewer"
     st.header("Second review pass by the same reviewer" if same_reviewer else "Second review pass")
-    st.metric("Agreement between review passes", f"{report['exact_label_agreement']:.0%}")
+    st.metric("Agreement between review passes", f"{report['exact_label_agreement']:.1%}")
     st.write(
         f"{report['n'] - len(report['disagreements'])} of {report['n']} labels match. "
         + report["agreement_interpretation"]

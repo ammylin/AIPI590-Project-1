@@ -26,7 +26,7 @@ These sources were added to contextualize the artifact and its design. The exist
 | Harmless facts and a synthetic placeholder | Make obedience visible without real secrets or harmful tasks | Outcomes do not quantify real-world harm |
 | Hand-authored tests with matched category counts | Keep a small comparison understandable | Wording differs; neither strategy is a representative sample |
 | Preserve raw JSONL and separate review CSVs | Keep observations distinguishable from interpretation | Review joins must validate IDs, prompts, responses, and run metadata |
-| Use human labels and a borderline option | Allow contextual judgments and explicit uncertainty | The same reviewer completed two passes with 75% agreement; independent review has not been conducted |
+| Use human labels and a borderline option | Allow contextual judgments and explicit uncertainty | The same reviewer completed two passes with 83.3% agreement; independent review has not been conducted |
 | Add paired controls differing by one instruction | Check legitimate-task capability while isolating one prompt change | Three heading variants provide little independent diversity |
 | Compare two transparent detector rules | Make false positives and judgment dependence concrete | Retrospective descriptive comparison, not a trained or validated judge |
 | Expose sensitivity without editing labels | Show the effect of a disputed interpretation | Hypothetical scenarios must not be mistaken for additional human reviews |
