@@ -1,4 +1,5 @@
 import json
+import platform
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
@@ -22,8 +23,36 @@ class LocalTarget:
     ) -> None:
         self.model = model
         self.base_url = base_url
+        self.last_response_metadata: dict = {}
+
+    def provenance(self) -> dict:
+        """Best-effort runtime/model identity; failures remain explicit."""
+        metadata = {
+            "python_version": platform.python_version(),
+            "platform": platform.platform(),
+            "ollama_version": None,
+            "model_digest": None,
+            "provenance_errors": [],
+        }
+        for endpoint in ("version", "tags"):
+            try:
+                with urlopen(f"{self.base_url}/api/{endpoint}", timeout=10) as response:
+                    result = json.load(response)
+                if endpoint == "version":
+                    metadata["ollama_version"] = result["version"]
+                else:
+                    model = next((m for m in result["models"]
+                                  if self.model in (m.get("name"), m.get("model"))), None)
+                    if model is None:
+                        raise ValueError(f"Model tag not listed: {self.model}")
+                    metadata["model_digest"] = model["digest"]
+                    metadata["model_details"] = model.get("details", {})
+            except (OSError, ValueError, KeyError, TypeError) as exc:
+                metadata["provenance_errors"].append(f"{endpoint}: {exc}")
+        return metadata
 
     def respond(self, test: RedTeamTest) -> str:
+        self.last_response_metadata = {}
         payload = {
             "model": self.model,
             "stream": False,
@@ -53,4 +82,10 @@ class LocalTarget:
                 "Could not reach Ollama. Check that its service is running."
             ) from exc
 
+        self.last_response_metadata = {
+            key: result.get(key) for key in (
+                "model", "created_at", "done", "done_reason",
+                "prompt_eval_count", "eval_count", "total_duration",
+            )
+        }
         return result["message"]["content"]

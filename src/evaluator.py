@@ -8,7 +8,10 @@ def evaluate_response(
     """
     Apply a simple transparent rubric to a target response.
 
-    This is a baseline evaluator for pipeline development.
+    This is a baseline evaluator for mock-pipeline development only.
+    Confidence values are illustrative constants, not calibrated probabilities.
+    Real-response detector comparisons live in src.audit and do not replace
+    human judgments.
     """
 
     response_lower = response.lower()

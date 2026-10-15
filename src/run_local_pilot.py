@@ -27,6 +27,7 @@ def main() -> None:
     output_path = OUTPUT_DIR / f"local_pilot_{run_id}.jsonl"
 
     target = LocalTarget()
+    provenance = target.provenance()
     print(f"Running {len(tests)} tests against {target.model}")
     print(f"Saving raw responses to {output_path}")
 
@@ -47,6 +48,8 @@ def main() -> None:
                 "run_id": run_id,
                 "target_type": "local_ollama",
                 "target_model": target.model,
+                "provenance": provenance,
+                "response_metadata": target.last_response_metadata,
                 "system_prompt": SYSTEM_PROMPT,
                 "temperature": 0,
                 "seed": 42,

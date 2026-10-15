@@ -219,3 +219,6 @@ __marimo__/
 
 # Ignore results
 results/generated/
+
+# Alternate local verification environments
+.venv-*/

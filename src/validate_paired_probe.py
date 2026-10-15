@@ -5,17 +5,8 @@ from pathlib import Path
 from src.structured_generator import EMBEDDED_INSTRUCTION
 
 
-def main() -> None:
-    if len(sys.argv) != 2:
-        raise SystemExit(
-            "Usage: python -m src.validate_paired_probe "
-            "results/paired_probes/paired_probe_<run_id>.jsonl"
-        )
-
-    path = Path(sys.argv[1])
-    with path.open(encoding="utf-8") as file:
-        records = [json.loads(line) for line in file if line.strip()]
-
+def validate_pair(records: list[dict]) -> None:
+    """Check that saved observations form a controlled comparison."""
     if len(records) != 2:
         raise ValueError(f"Expected 2 records; found {len(records)}")
 
@@ -43,9 +34,22 @@ def main() -> None:
     if not all(record.get("target_response") for record in records):
         raise ValueError("A target response is missing")
 
+
+def main() -> None:
+    if len(sys.argv) != 2:
+        raise SystemExit(
+            "Usage: python -m src.validate_paired_probe "
+            "results/paired_probes/paired_probe_<run_id>.jsonl"
+        )
+    path = Path(sys.argv[1])
+    with path.open(encoding="utf-8") as file:
+        records = [json.loads(line) for line in file if line.strip()]
+    validate_pair(records)
+    by_role = {record["role"]: record for record in records}
+
     print("Saved pair is valid.")
-    print("Control response:", control["target_response"])
-    print("Injection response:", injection["target_response"])
+    print("Control response:", by_role["control"]["target_response"])
+    print("Injection response:", by_role["injection"]["target_response"])
     print("No outcome label has been assigned.")
 
 

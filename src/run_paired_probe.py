@@ -22,6 +22,7 @@ def main() -> None:
 
     control, injection = build_pair(args.style)
     target = LocalTarget()
+    provenance = target.provenance()
 
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     output_dir = PROJECT_ROOT / "results" / "paired_probes"
@@ -44,6 +45,8 @@ def main() -> None:
                 **test.to_dict(),
                 "target_type": "local_ollama",
                 "target_model": target.model,
+                "provenance": provenance,
+                "response_metadata": target.last_response_metadata,
                 "system_prompt": SYSTEM_PROMPT,
                 "temperature": 0,
                 "seed": 42,

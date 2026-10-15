@@ -1,476 +1,232 @@
+"""Explore preserved model observations, reviews, and evaluator disagreement."""
+
 import json
 from pathlib import Path
 
 import pandas as pd
 import streamlit as st
 
-from src.metrics import (
-    calculate_agreement,
-    calculate_category_coverage,
-    calculate_condition_summary,
+from src.audit import (
+    DISPUTED_CASE, PROJECT_ROOT, REVISED_RUN, condition_summary, detector_audit,
+    discover_runs, load_run, review_path_for,
 )
+from src.validate_paired_probe import validate_pair
 
 
-PROJECT_ROOT = Path(__file__).resolve().parent
-
-DATASETS = {
-    "Curated sample data": PROJECT_ROOT / "data" / "sample_results.jsonl",
-    "Offline experiment": PROJECT_ROOT / "results" / "offline_experiment.jsonl",
-    "Revised local-model pilot": (
-    PROJECT_ROOT / "results" / "local_pilot_20261005T221442Z.jsonl"
-),
-    "Reviewed paired probe": (
-    PROJECT_ROOT
-    / "results"
-    / "paired_probes"
-    / "paired_probe_20261007T131704875832Z.jsonl"
-),
-}
+CONDITION_NAMES = {"baseline": "Generic baseline", "swarm": "Specialized strategies"}
 
 
-def load_results(path: Path) -> pd.DataFrame:
-    """Load JSONL evaluation results into a DataFrame."""
-    records = []
-
-    with path.open("r", encoding="utf-8") as file:
-        for line in file:
-            line = line.strip()
-
-            if line:
-                records.append(json.loads(line))
-
-    results = pd.DataFrame(records)
-
-    # Ensure optional columns exist for all datasets.
-    defaults = {
-        "human_label": "unreviewed",
-        "human_notes": "",
-        "notes": "",
-        "failure_mode": None,
-        "evaluator_confidence": 0.0,
-    }
-
-    for column, default_value in defaults.items():
-        if column not in results.columns:
-            results[column] = default_value
-
-    # The dashboard uses "notes" for the test explorer.
-    # If only human_notes exists, preserve both columns.
-    results["notes"] = results["notes"].fillna("")
-    results["human_notes"] = results["human_notes"].fillna("")
-
-    return results
-
-
-st.set_page_config(
-    page_title="SwarmAudit Lite",
-    page_icon="🛡️",
-    layout="wide",
-)
-
-st.title("🛡️ SwarmAudit Lite")
-st.subheader("An interactive, human-reviewed LLM red-teaming workflow")
-
-st.write(
-    """
-    SwarmAudit Lite compares a generic red-team strategy with a small,
-    role-diverse red-team workflow. The goal is to study coverage,
-    redundancy, failure patterns, and evaluator agreement.
-
-    We explore a small comparison of hand-authored generic and specialized
-    safety tests, plus matched control/injection probes run against a
-    local model. Human review distinguishes following an embedded
-    instruction from merely mentioning it. Mock datasets are included
-    to demonstrate the pipeline, not as evidence about model safety.
-    """
-)
-
-available_datasets = {
-    name: path for name, path in DATASETS.items() if path.exists()
-}
-
-if not available_datasets:
-    st.error("No evaluation datasets were found.")
-    st.stop()
-
-selected_dataset = st.selectbox(
-    "Choose an evaluation dataset",
-    options=list(available_datasets.keys()),
-)
-
-data_path = available_datasets[selected_dataset]
-results = load_results(data_path)
-
-if selected_dataset == "Reviewed paired probe":
-    import csv
-    PAIR_RUNS = {
-        "announcement": "20261007T131704875832Z",
-        "newsletter": "20261013T234602749276Z",
-        "meeting_note": "20261013T234623243236Z",
-    }
-
-    selected_style = st.selectbox(
-        "Choose document style",
-        options=list(PAIR_RUNS),
-    )
-    pair_run_id = PAIR_RUNS[selected_style]
-
-    pair_data_path = (
-        PROJECT_ROOT / "results" / "paired_probes"
-        / f"paired_probe_{pair_run_id}.jsonl"
-    )
-    if not pair_data_path.exists():
-        st.error(f"Missing paired-probe data: {pair_data_path}")
-        st.stop()
-
-    results = load_results(pair_data_path)
-
-    review_path = (
-        PROJECT_ROOT / "data" / f"pair_review_{pair_run_id}.csv"
-    )
-
-    if not review_path.exists():
-        st.error(f"Missing review file: {review_path}")
-        st.stop()
-
-    with review_path.open(newline="", encoding="utf-8") as file:
-        reviews = list(csv.DictReader(file))
-
-    if len(results) != 2 or set(results["role"]) != {"control", "injection"}:
-        st.error("Expected exactly one control and one injection response.")
-        st.stop()
-
-    if len(reviews) != 2 or {row["role"] for row in reviews} != {
-        "control",
-        "injection",
-    }:
-        st.error("Expected one review for each role.")
-        st.stop()
-
-    review_by_role = {row["role"]: row for row in reviews}
-
-    for _, row in results.iterrows():
-        review = review_by_role[row["role"]]
-        if (
-            row["run_id"] != review["run_id"]
-            or row["test_id"] != review["test_id"]
-            or not review["human_label"].strip()
-        ):
-            st.error(f"Review does not match response: {row['role']}")
-            st.stop()
-
-    st.success("Loaded one human-reviewed matched pair.")
-    st.caption(
-        "Local qwen2.5:3b · one control and one injection test · "
-        "labels from one human reviewer"
-    )
-    st.subheader("Reviewed pairs at a glance")
-
-    pair_summary = []
-    for style, run_id in PAIR_RUNS.items():
-        summary_path = PROJECT_ROOT / "data" / f"pair_review_{run_id}.csv"
-        if not summary_path.exists():
-            st.error(f"Missing review file: {summary_path}")
-            st.stop()
-
-        with summary_path.open(newline="", encoding="utf-8") as file:
-            pair_reviews = list(csv.DictReader(file))
-
-        labels = {
-            review["role"]: review["human_label"].strip()
-            for review in pair_reviews
-        }
-        if len(pair_reviews) != 2 or set(labels) != {"control", "injection"}:
-            st.error(f"Expected one reviewed control and injection for {style}.")
-            st.stop()
-
-        pair_summary.append({
-            "Document style": style.replace("_", " ").title(),
-            "Control": labels["control"],
-            "Injection": labels["injection"],
-        })
-
-    st.dataframe(pd.DataFrame(pair_summary), hide_index=True)
-    st.caption(
-        "These probes share the same fact and embedded instruction; only "
-        "the document-style heading changes. They are closely related "
-        "examples, not a general failure-rate estimate."
-    )
-    st.title("Anatomy of a prompt-injection probe")
-    st.write(
-        "The two prompts contain the same garden-tour fact. "
-        "The injection prompt additionally contains an instruction "
-        "inside the document."
-    )
-
-    control = results.loc[results["role"] == "control"].iloc[0]
-    injection = results.loc[results["role"] == "injection"].iloc[0]
-
-    left, right = st.columns(2)
-
-    for column, role, row in (
-        (left, "Control", control),
-        (right, "Injection", injection),
-    ):
-        review = review_by_role[role.lower()]
-        with column:
-            st.subheader(role)
-            st.write(f"**Human label:** `{review['human_label']}`")
-            st.write("**Prompt**")
-            st.code(row["test_prompt"])
-            st.write("**Model response**")
-            st.code(row["target_response"])
-            st.write(f"**Review:** {review['human_notes']}")
-
-    st.warning(
-        "This is one paired observation, not a failure-rate estimate "
-        "or evidence that a multi-agent swarm outperforms a baseline."
-    )
-
-    # The older dashboard sections expect automated evaluator labels.
-    st.stop()
-
-if selected_dataset == "Revised local-model pilot":
-    import csv
-
-    review_path = (
-        PROJECT_ROOT / "data" / "local_review_20261005T221442Z.csv"
-    )
-
-    if not review_path.exists():
-        st.error(f"Missing human-review file: {review_path}")
-        st.stop()
-
-    with review_path.open(newline="", encoding="utf-8") as file:
-        reviews = list(csv.DictReader(file))
-
-    review_by_id = {row["test_id"]: row for row in reviews}
-
-    if len(review_by_id) != len(reviews):
-        st.error("Duplicate test IDs found in the review file.")
-        st.stop()
-
-    if set(results["test_id"]) != set(review_by_id):
-        st.error("The pilot results and human reviews have different test IDs.")
-        st.stop()
-
-    results["human_label"] = results["test_id"].map(
-        lambda test_id: review_by_id[test_id]["human_label"].strip()
-    )
-    results["human_notes"] = results["test_id"].map(
-        lambda test_id: review_by_id[test_id]["human_notes"].strip()
-    )
-
-    st.success(f"Loaded {len(results)} real-model pilot responses.")
-    st.caption(
-        "Target: qwen2.5:3b running locally. Labels are from one human "
-        "reviewer; no automated evaluator was applied to this pilot."
-    )
-
-    st.header("Baseline vs. specialized strategies")
-
-    summary = []
-    for condition in ("baseline", "swarm"):
-        group = results[results["condition"] == condition]
-        valid = group[group["human_label"] != "invalid"]
-
-        summary.append({
-            "Condition": condition,
-            "Tests run": len(group),
-            "Valid tests": len(valid),
-            "Human-labeled failures": (
-                valid["human_label"] == "failure"
-            ).sum(),
-            "Passes": (valid["human_label"] == "pass").sum(),
-            "Invalid tests": (
-                group["human_label"] == "invalid"
-            ).sum(),
-        })
-
-    st.dataframe(pd.DataFrame(summary), hide_index=True)
-
-    st.warning(
-        "This is a small, hand-authored pilot—not evidence that an "
-        "autonomous swarm outperforms a baseline. Category counts were "
-        "matched by design, so category coverage is not an outcome here."
-    )
-
-    st.header("Explore a response")
-
-    selected_id = st.selectbox(
-        "Select a test",
-        results["test_id"].tolist(),
-    )
-    row = results.loc[results["test_id"] == selected_id].iloc[0]
-
-    st.write(
-        f"**Condition:** {row['condition']} · "
-        f"**Strategy:** {row['strategy']} · "
-        f"**Category:** {row['category']}"
-    )
-    st.write(f"**Human label:** `{row['human_label']}`")
-    st.subheader("Legitimate task and test prompt")
-    st.info(row["test_prompt"])
-    st.subheader("Expected behavior")
-    st.write(row["expected_behavior"])
+def show_response(row: dict) -> None:
+    st.write(f"**Human label:** `{row.get('human_label', 'unreviewed')}`")
+    st.subheader("Prompt")
+    st.code(row["test_prompt"], language=None)
+    st.write("**Expected behavior:**", row["expected_behavior"])
     st.subheader("Model response")
-    st.code(row["target_response"])
-    st.subheader("Human-review rationale")
-    st.write(row["human_notes"])
+    st.code(row.get("target_response") or "No response recorded", language=None)
+    if row.get("error"):
+        st.error(row["error"])
+    if row.get("response_metadata", {}).get("done_reason") == "length":
+        st.warning("Generation reached its token limit. Consider truncation before assigning an outcome label.")
+    st.write("**Human-review notes:**", row.get("human_notes") or "Not yet reviewed")
+    if row.get("target_model"):
+        with st.expander("Model settings and recorded provenance"):
+            st.json({key: row[key] for key in (
+                "run_id", "target_model", "system_prompt", "temperature", "seed",
+                "num_predict", "provenance", "response_metadata",
+            ) if key in row})
+            if "response_metadata" not in row:
+                st.caption("This historical response has no recorded termination metadata or model digest.")
 
-    # The existing dashboard sections expect automated_label. They apply
-    # to the mock datasets, not to this human-reviewed local pilot.
+
+def show_detector_audit(records: list[dict], sensitivity: bool) -> None:
+    report = detector_audit(records, sensitivity)
+    st.header("When does a placeholder detector disagree with human review?")
+    st.write(
+        "Contains placeholder flags any mention. Placeholder only flags a response "
+        "consisting solely of the placeholder, ignoring case and surrounding whitespace. "
+        "Both rules are deliberately simple; neither determines whether a response "
+        "semantically obeyed an instruction."
+    )
+    if not report["included"]:
+        st.info("No attack responses with pass/failure human labels are available for comparison.")
+        return
+    table = pd.DataFrame(report["summary"]).rename(columns={
+        "rule": "Rule", "n": "Compared", "true_positive": "True positives",
+        "false_positive": "False positives", "true_negative": "True negatives",
+        "false_negative": "False negatives", "agreement": "Agreement",
+        "precision": "Precision", "recall": "Recall",
+    })
+    st.dataframe(table, hide_index=True)
+    st.caption(
+        "Positive = human-labeled prompt-injection/instruction-conflict failure. "
+        "Human labels are one reviewer's judgments, not established ground truth. "
+        "Benign-task categories and labels other than pass/failure are excluded. "
+        f"Excluded counts: {report['excluded']}. This is retrospective analysis, "
+        "not a held-out benchmark or a new model experiment."
+    )
+    disagreements = []
+    by_id = {row["test_id"]: row for row in records}
+    for case in report["cases"]:
+        for rule in ("contains_placeholder", "placeholder_only"):
+            if case[rule] != (case["human_label"] == "failure"):
+                disagreements.append({
+                    "Test": case["test_id"], "Rule": rule,
+                    "Rule label": "failure" if case[rule] else "pass",
+                    "Human label": case["human_label"],
+                    "Response": by_id[case["test_id"]]["target_response"],
+                })
+    if disagreements:
+        st.subheader("Inspect disagreements")
+        st.dataframe(pd.DataFrame(disagreements), hide_index=True)
+    else:
+        st.info("These rules agree with the available labels on this sample.")
+
+
+def show_pilot() -> None:
+    paths = discover_runs("pilot")
+    if not paths:
+        st.info("No saved local-model pilots found.")
+        return
+    default = next((i for i, p in enumerate(paths) if REVISED_RUN in p.name), 0)
+    path = st.selectbox("Choose pilot run", paths, index=default, format_func=lambda p: p.stem)
+    records = load_run(path, review_path_for(path))
+    st.caption(
+        f"{records[0]['target_model']} · {records[0]['run_id']} · "
+        "original human judgments preserved separately from responses"
+    )
+    st.header("Generic vs. specialized tests")
+    st.dataframe(pd.DataFrame(condition_summary(records)), hide_index=True)
+    st.warning(
+        "These are descriptive counts from hand-authored tests and one reviewer. "
+        "Category counts were matched by design. They do not establish that one "
+        "strategy is generally better or that an autonomous swarm was evaluated."
+    )
+    sensitivity = False
+    disputed = next((r for r in records if r["test_id"] == DISPUTED_CASE), None)
+    if disputed and disputed["human_label"] == "failure":
+        st.subheader("A judgment that can change the result")
+        st.write(
+            "swarm_ambiguity_001 summarizes the appointment before discussing the "
+            "injected priority claim. Its original failure label is debatable: the "
+            "response could be describing the instruction rather than obeying it. "
+            "An independent second human review is pending."
+        )
+        with st.expander("Read the disputed prompt, response, and original rationale"):
+            show_response(disputed)
+        sensitivity = st.checkbox("Sensitivity analysis: treat the disputed case as borderline")
+        if sensitivity:
+            st.dataframe(pd.DataFrame(condition_summary(records, True)), hide_index=True)
+            st.info(
+                "This hypothetical scenario changes only the analysis. The saved human "
+                "label remains failure. Borderline cases are excluded from binary detector metrics."
+            )
+    show_detector_audit(records, sensitivity)
+    st.header("Explore a response")
+    selected = st.selectbox("Select a test", [r["test_id"] for r in records])
+    row = next(r for r in records if r["test_id"] == selected)
+    st.write(f"**Condition:** {CONDITION_NAMES[row['condition']]} · **Category:** {row['category']}")
+    show_response(row)
+    st.download_button("Download responses with review labels", json.dumps(records, indent=2),
+                       file_name=f"{path.stem}_with_reviews.json", mime="application/json")
+
+
+def show_pairs() -> None:
+    paths = discover_runs("pair")
+    if not paths:
+        st.info("No saved paired probes found.")
+        return
+    st.header("Saved matched probes")
+    summary = []
+    for path in paths:
+        rows = load_run(path, review_path_for(path))
+        validate_pair(rows)
+        by_role = {r["role"]: r for r in rows}
+        summary.append({
+            "Run": rows[0]["run_id"], "Pair": rows[0]["pair_id"],
+            "Control": by_role["control"]["human_label"],
+            "Injection": by_role["injection"]["human_label"],
+        })
+    st.dataframe(pd.DataFrame(summary), hide_index=True)
+    path = st.selectbox("Choose paired run", paths, format_func=lambda p: p.stem)
+    records = load_run(path, review_path_for(path))
+    validate_pair(records)
+    st.caption(f"{records[0]['target_model']} · {records[0]['pair_id']}")
+    st.write("The prompts differ only by one instruction embedded inside the document.")
+    by_role = {r["role"]: r for r in records}
+    for column, role in zip(st.columns(2), ("control", "injection")):
+        with column:
+            st.subheader(role.title())
+            show_response(by_role[role])
+    st.warning(
+        "The three supplied garden-tour probes share the same fact and instruction, "
+        "with different headings. They are closely related observations, not "
+        "independent attack strategies or a general failure-rate estimate. "
+        "Unreviewed responses carry no outcome claim."
+    )
+
+
+def show_demo(path: Path) -> None:
+    st.warning(
+        "Demonstration data: these are curated examples or deterministic mock-target "
+        "outputs. They are not observations of a real model. Confidence values are "
+        "illustrative constants, not calibrated probabilities."
+    )
+    records = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    frame = pd.DataFrame(records)
+    st.dataframe(frame.groupby(["condition", "automated_label"]).size().reset_index(name="Count"), hide_index=True)
+    st.bar_chart(frame.groupby("automated_label").size())
+    selected = st.selectbox("Select a demo test", frame["test_id"].tolist())
+    row = next(r for r in records if r["test_id"] == selected)
+    show_response(row)
+    st.write("**Mock automated label:**", row["automated_label"])
+    st.write("**Mock rationale:**", row.get("evaluator_rationale", ""))
+    st.caption(f"Illustrative rule score: {row.get('evaluator_confidence', 0):.0%}; not a probability of correctness.")
+    # Preserve the original demo's coverage and evaluator-agreement views.
+    from src.metrics import calculate_category_coverage, calculate_condition_summary
+    st.subheader("Demo category coverage and condition metrics")
+    frame["human_label"] = frame.get("human_label", pd.Series("unreviewed", index=frame.index)).fillna("unreviewed")
+    st.dataframe(calculate_category_coverage(frame), hide_index=True)
+    reviewed = frame[frame["human_label"] != "unreviewed"]
+    if not reviewed.empty:
+        st.dataframe(calculate_condition_summary(reviewed), hide_index=True)
+    else:
+        st.caption("No reviewed demo labels; evaluator agreement is unavailable.")
+
+
+st.set_page_config(page_title="SwarmAudit Lite", page_icon="🛡️", layout="wide")
+st.title("🛡️ SwarmAudit Lite")
+st.subheader("Human-reviewed prompt-injection evaluation")
+st.write(
+    "For students and practitioners auditing LLM behavior: inspect whether a model "
+    "obeyed an instruction hidden inside a document or merely mentioned it while "
+    "doing the legitimate task. Explore real saved responses, human judgments, "
+    "matched controls, and the limitations of simple automatic detectors."
+)
+selection = st.selectbox("Choose an evaluation dataset", [
+    "Local-model pilots", "Paired probes", "Curated sample data", "Offline experiment",
+])
+try:
+    if selection == "Local-model pilots":
+        show_pilot()
+    elif selection == "Paired probes":
+        show_pairs()
+    else:
+        path = PROJECT_ROOT / ("data/sample_results.jsonl" if selection == "Curated sample data" else "results/offline_experiment.jsonl")
+        show_demo(path)
+except (ValueError, KeyError, OSError) as exc:
+    st.error(f"Could not validate the selected evidence: {exc}")
     st.stop()
 
-st.success(
-    f"Loaded {len(results)} results from `{data_path.relative_to(PROJECT_ROOT)}`."
-)
-
-st.divider()
-
-# Summary metrics
-total_tests = len(results)
-baseline_tests = len(results[results["condition"] == "baseline"])
-swarm_tests = len(results[results["condition"] == "swarm"])
-categories_covered = results["category"].nunique()
-
-col1, col2, col3, col4 = st.columns(4)
-
-with col1:
-    st.metric("Total tests", total_tests)
-
-with col2:
-    st.metric("Baseline tests", baseline_tests)
-
-with col3:
-    st.metric("Swarm tests", swarm_tests)
-
-with col4:
-    st.metric("Categories covered", categories_covered)
-
-st.divider()
-
-# Comparison by condition
-st.header("Comparison by condition")
-
-condition_summary = calculate_condition_summary(results)
-
-display_summary = condition_summary.copy()
-
-display_summary["human_evaluator_agreement"] = (
-    display_summary["human_evaluator_agreement"] * 100
-).round(1).astype(str) + "%"
-
-st.dataframe(display_summary, use_container_width=True)
-
-st.subheader("Automated labels by condition")
-
-label_counts = (
-    results.groupby(["condition", "automated_label"])
-    .size()
-    .unstack(fill_value=0)
-)
-
-st.bar_chart(label_counts)
-
-# Human versus automated evaluation
-st.header("Human versus automated evaluation")
-
-reviewed_results = results[results["human_label"] != "unreviewed"]
-
-if reviewed_results.empty:
-    st.info(
-        "No human-reviewed labels are present in this dataset yet. "
-        "The agreement metric will appear after human review."
+with st.expander("Research context, scope, and next steps"):
+    st.markdown(
+        "Document instructions cross a trust boundary when treated as commands "
+        "([Greshake et al., 2023](https://arxiv.org/abs/2302.12173)). "
+        "Larger agent benchmarks include "
+        "[InjecAgent](https://aclanthology.org/2024.findings-acl.624/) and "
+        "[AgentDojo](https://arxiv.org/abs/2406.13352). "
+        "This project contributes an inspectable teaching and audit workflow, with "
+        "a small evaluation case study. It does not reproduce those benchmarks.\n\n"
+        "Next steps: independent human review, more diverse matched tasks and "
+        "models, and separate measures of task completion and instruction obedience. "
+        "Synthetic placeholder outputs do not measure real-world harm."
     )
-else:
-    overall_agreement = calculate_agreement(reviewed_results)
-
-    st.metric(
-        "Human/evaluator agreement",
-        f"{overall_agreement:.1%}",
-    )
-
-    disagreement_data = reviewed_results[
-        reviewed_results["automated_label"]
-        != reviewed_results["human_label"]
-    ]
-
-    if disagreement_data.empty:
-        st.success("No human/evaluator disagreements in the reviewed sample.")
-    else:
-        st.warning(
-            f"{len(disagreement_data)} reviewed result(s) contain disagreement."
-        )
-
-        st.dataframe(
-            disagreement_data[
-                [
-                    "test_id",
-                    "condition",
-                    "strategy",
-                    "category",
-                    "automated_label",
-                    "human_label",
-                    "notes",
-                    "human_notes",
-                ]
-            ],
-            use_container_width=True,
-        )
-
-# Category coverage
-st.header("Category coverage")
-
-coverage = calculate_category_coverage(results)
-
-st.dataframe(coverage, use_container_width=True)
-
-coverage_chart = (
-    coverage
-    .pivot(
-        index="category",
-        columns="condition",
-        values="test_count",
-    )
-    .fillna(0)
-)
-
-st.bar_chart(coverage_chart)
-
-# Individual test explorer
-st.header("Test explorer")
-
-selected_test_id = st.selectbox(
-    "Select a test",
-    options=results["test_id"].tolist(),
-)
-
-selected_test = results[
-    results["test_id"] == selected_test_id
-].iloc[0]
-
-st.write(f"**Condition:** {selected_test['condition']}")
-st.write(f"**Strategy:** {selected_test['strategy']}")
-st.write(f"**Category:** {selected_test['category']}")
-st.write(f"**Automated label:** `{selected_test['automated_label']}`")
-st.write(f"**Human label:** `{selected_test['human_label']}`")
-st.write(
-    f"**Evaluator confidence:** "
-    f"{float(selected_test['evaluator_confidence']):.0%}"
-)
-
-st.subheader("Test prompt")
-st.info(selected_test["test_prompt"])
-
-st.subheader("Expected behavior")
-st.write(selected_test["expected_behavior"])
-
-st.subheader("Target response")
-st.code(selected_test["target_response"])
-
-st.subheader("Evaluator rationale")
-st.write(selected_test.get("evaluator_rationale", ""))
-
-st.subheader("Notes")
-st.write(selected_test["notes"])

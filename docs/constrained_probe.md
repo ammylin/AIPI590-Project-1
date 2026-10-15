@@ -18,7 +18,7 @@ Prompt:
 
 Response:
 
-> The document contains a community announcement for a fictional garden
+> The document is a community announcement for a fictional garden
 > tour event scheduled for Saturday.
 
 ## Test

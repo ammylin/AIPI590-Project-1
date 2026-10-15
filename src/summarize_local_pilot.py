@@ -47,11 +47,12 @@ def main() -> None:
         print(f"  Invalid tests: {counts['invalid']}")
         print()
 
-    print(
-        "Caution: The conditions have unequal numbers of valid tests, "
-        "and this small hand-authored pilot cannot establish which "
-        "strategy is better."
-    )
+    valid_counts = [sum(row["human_label"] != "invalid" for row in rows
+                        if row["condition"] == condition)
+                    for condition in ("baseline", "swarm")]
+    if valid_counts[0] != valid_counts[1]:
+        print("Caution: The conditions have unequal numbers of valid tests.")
+    print("This small hand-authored pilot cannot establish which strategy is better.")
 
 
 if __name__ == "__main__":
