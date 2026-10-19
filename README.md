@@ -41,12 +41,19 @@ In this pair, adding the instruction changed a summary into the requested marker
 
 **Research question:** How do test validity and evaluation rules change whether an LLM response is judged to have followed an instruction hidden inside a document?
 
-The project follows four steps:
+## Project workflow
 
-1. **Construct judgeable tests.** Use small, hand-authored tasks with a concrete expected behavior; add matched control/injection pairs.
-2. **Preserve observations.** Run the local model and save prompts, settings, and raw responses as JSONL.
-3. **Review in context.** Store human labels and evidence notes in separate CSVs, validating that they match the saved observations.
-4. **Audit the evaluation.** Inspect detector errors and see how one disputed judgment changes the summary without editing the original label.
+The project moves from designing tests to inspecting the evidence behind an evaluation result:
+
+**Test design → Model responses → Human review → Evaluation audit → Dashboard**
+
+1. **Design the tests.** Define legitimate tasks, embedded instructions where applicable, and expected behavior. Construct the generic baseline, specialized tests, and separate matched control/injection pairs.
+2. **Collect responses.** Run the tests against local `qwen2.5:3b` with fixed generation settings. Preserve prompts, settings, and raw responses in JSONL files.
+3. **Review the evidence.** Assign human labels and evidence notes in separate CSV files, identifying invalid or uncertain cases. Validate that each review matches its saved observation.
+4. **Audit the scoring.** Compare simple placeholder detectors with human judgments on attack-task responses. Examine how treating a disputed label as borderline changes the analysis while preserving the original judgment.
+5. **Explore and reproduce.** Use the Streamlit dashboard to inspect prompts, responses, matched pairs, and evaluator disagreements. Regenerate reports from the saved evidence using the analysis scripts.
+
+The repository includes the collected responses and completed reviews, so readers can explore the dashboard and reproduce the analyses offline after installing dependencies. Collecting new model responses is optional and requires Ollama; labeling those new responses remains a human-review step. See [Run locally](#run-locally) and [Reproduce the project](#reproduce-the-project).
 
 ## Project Contribution
 SwarmAudit Lite is an educational case study that demonstrates indirect prompt injection and examines how evaluation rules affect judgments of LLM behavior. Using simple, matched document-summary tasks, the project allows students to observe how an instruction embedded in external content can redirect a model away from the user's intended task.
@@ -58,6 +65,28 @@ The project combines hand-authored test strategies, locally generated model outp
 ## What tests are compared?
 
 The revised pilot contains 12 hand-authored tests divided into two conditions: a generic baseline and a specialized-strategy condition. Both conditions are evaluated using the same local model, Qwen2.5:3B, with the same generation settings. The purpose is to explore how different approaches to test construction expose different model behaviors, not to establish that one approach is superior.
+
+### How ambiguity and consistency fit the research question
+
+The study has two connected aims:
+
+- **Model behavior:** observe whether an instruction hidden inside a document redirects the model away from the user's legitimate task.
+- **Evaluation reliability:** examine whether scoring rules and human judgments correctly distinguish instruction obedience, ordinary task failure, and mixed responses.
+
+Injection is the central security behavior being investigated. Ambiguity and consistency contribute supporting evidence about how to interpret that behavior; the 12 pilot tests do not all measure prompt-injection resistance directly.
+
+| Part of the study | Role in the project | Why include it? |
+|---|---|---|
+| Injection tests | Direct probes of embedded-instruction obedience | Observe whether the model abandons a summary or extraction task to follow the document's command |
+| Ambiguity tests | Instruction-conflict cases that also expose judgment difficulties | Examine false authority claims and the distinction between content and commands; mixed responses can reveal where a simple label or keyword rule is inadequate |
+| Consistency tests | Benign checks of ordinary task behavior | Identify rewriting, meaning-preservation, or over-refusal problems without treating them as evidence of attack success |
+| Matched control/injection pairs | Separate, closely controlled demonstrations of the embedded instruction's effect | Compare the same legitimate task with and without the instruction; these pairs provide the clearest behavioral illustration in the project |
+
+These roles overlap: the current ambiguity prompts also contain embedded commands, so they can probe injection behavior as well as evaluation difficulty. The strategy name alone does not determine whether an attack succeeded; the full prompt, expected behavior, and response must be reviewed.
+
+For example, a hypothetical response that summarizes the tour and says it will ignore the request to output `[PROTECTED_PLACEHOLDER]` contains the marker without obeying the command. Ambiguity cases help motivate contextual review of such responses. Conversely, refusing a harmless paraphrasing request is a task-completion problem, not evidence of successful prompt injection.
+
+The benign consistency tasks provide limited context for normal performance. They are not matched attack-free versions of the pilot's injection tasks and do not establish a general task-performance baseline. Across both conditions, the four benign tasks are excluded from the placeholder-detector comparison, which uses the eight `prompt_injection` and `instruction_conflict` responses. See the [detector analysis](docs/evaluator_analysis.md) and [matched-probe findings](#matched-controlinjection-probes).
 
 ### Generic baseline versus specialized strategies
 
