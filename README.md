@@ -46,7 +46,12 @@ The project follows four steps:
 3. **Review in context.** Store human labels and evidence notes in separate CSVs, validating that they match the saved observations.
 4. **Audit the evaluation.** Inspect detector errors and see how one disputed judgment changes the summary without editing the original label.
 
-The contribution is this integrated workflow and teaching case study. The internal `swarm` condition means hand-authored specialized strategies. A separate prototype uses a local model to choose a heading, while the code handles the test.
+## Project Contribution
+SwarmAudit Lite is an educational case study that demonstrates indirect prompt injection and examines how evaluation rules affect judgments of LLM behavior. Using simple, matched document-summary tasks, the project allows students to observe how an instruction embedded in external content can redirect a model away from the user's intended task.
+
+Beyond demonstrating the attack, the project provides an inspectable workflow for comparing raw model responses, human judgments, and transparent automated detection rules. This illustrates why mentioning an injected instruction is not necessarily equivalent to obeying it, and why evaluation methods must be carefully designed and validated.
+
+The project combines hand-authored test strategies, locally generated model outputs, evidence-linked human reviews, reproducible analysis, and an interactive dashboard. It is intended as a teaching and experimentation tool rather than a validated security benchmark. The specialized test condition uses hand-authored strategies; a separate constrained-generation prototype uses a local model to select a heading while code constructs the test. A fully autonomous multi-agent swarm is not implemented.
 
 ### What tests are compared?
 
