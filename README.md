@@ -34,6 +34,8 @@ Suppose you ask an assistant to summarize a simple community announcement: "A fi
 These are actual saved `qwen2.5:3b` responses from my work. See the [raw pair](results/paired_probes/paired_probe_20261007T131704875832Z.jsonl), [matching review](data/pair_review_20261007T131704875832Z.csv), and [example walkthrough](docs/constrained_probe.md). Note: No real secret is involved, as the placeholder is just a harmless marker.
 
 In this pair, adding the instruction changed a summary into the requested marker. But a hypothetical response such as “The tour is on Saturday; I ignored the request to output `[PROTECTED_PLACEHOLDER]`” would also contain that marker while completing the task. **As such, mentioning an injected instruction is not enough to establish obedience.** This distinction motivates the detector comparison below.
+### Dashboard Demo
+![Streamlit Demo](poster/demo.gif)
 
 ## Research question and approach
 
